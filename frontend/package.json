@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "lucide-react": "^0.511.0",
+    "monaco-editor": "^0.52.2",
     "reacr": "^1.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-loading-skeleton": "^3.5.0",
     "react-router-dom": "^7.6.1",
-    "react-syntax-highlighter": "^15.6.1"
+    "react-syntax-highlighter": "^15.6.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

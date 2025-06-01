@@ -1,198 +1,223 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import io from 'socket.io-client';
 import { Download, Loader } from 'lucide-react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
+import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 SyntaxHighlighter.registerLanguage('python', python);
 
 const CodeGeneration = () => {
+  const [socket, setSocket] = useState(null);
+  const [trainingData, setTrainingData] = useState('');
   const [prompt, setPrompt] = useState('');
-  const [sampleData, setSampleData] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState('');
+  const [code, setCode] = useState('// Generated code will appear here');
+  const [displayedCode, setDisplayedCode] = useState('// Generated code will appear here');
+  const [steps, setSteps] = useState([]);
+  const [displayedSteps, setDisplayedSteps] = useState([]);
   const [datasets, setDatasets] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [initiated, setInitiated] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const chatContainerRef = useRef(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const sessionId = new URLSearchParams(window.location.search).get('session');
 
-    // Simulated API call - replace with real backend call
-    setTimeout(() => {
-      setGeneratedCode(`import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    setUserId(storedUserId);
 
-model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(sequence_length, features)),
-    LSTM(32),
-    Dense(1, activation='sigmoid')
-])
+    const newSocket = io('http://localhost:5000', {
+      transports: ['websocket']
+    });
+    setSocket(newSocket);
 
-model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy']
-)`);
+    let accumulatedResponse = '';
+    let debounceTimer;
 
-      setDatasets([
-        {
-          name: "Twitter Sentiment Analysis Dataset",
-          description: "Large dataset of labeled tweets for sentiment analysis",
-          url: "https://kaggle.com/datasets/twitter-sentiment"
-        },
-        {
-          name: "Financial News Headlines",
-          description: "Collection of financial news with sentiment labels",
-          url: "https://kaggle.com/datasets/financial-sentiment"
-        }
-      ]);
+    newSocket.on('generate-response-chunk', (data) => {
+      accumulatedResponse += data.chunk;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        parseGeminiResponse(accumulatedResponse, true);
+      }, 16);
+    });
 
+    newSocket.on('generate-response-result', (data) => {
       setIsLoading(false);
-    }, 2000);
+      parseGeminiResponse(data.response, false);
+      accumulatedResponse = '';
+      if (data.datasets) {
+        setDatasets(data.datasets);
+      }
+    });
+
+    newSocket.on('error', (errorData) => {
+      console.error('Socket error:', errorData.message);
+      setIsLoading(false);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  const parseGeminiResponse = (response, isStreaming) => {
+    if (!isStreaming) {
+      setDisplayedCode('');
+      setDisplayedSteps([]);
+    }
+
+    if (isStreaming) {
+      const partialMatch = response.match(/<code>([\s\S]*?)(<\/code>|$)/);
+      if (partialMatch) {
+        setDisplayedCode(partialMatch[1].trim());
+      }
+      console.log(displayedCode)
+      return;
+    }
+
+    const tagsMatch = response.match(/<ChanetTags>([\s\S]*?)<\/ChanetTags>/);
+    if (tagsMatch) {
+      const steps = tagsMatch[1].split('\n').map(tag => {
+        const [title, ...desc] = tag.split(':');
+        return { title: title.trim(), description: desc.join(':').trim() };
+      });
+      setSteps(steps);
+      setDisplayedSteps(steps);
+    }
+
+    const codeMatch = response.match(/<code>([\s\S]*?)<\/code>/);
+    if (codeMatch) {
+      const finalCode = codeMatch[1].trim();
+      setCode(finalCode);
+      setDisplayedCode(finalCode);
+    }
+
+    setInitiated(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!prompt.trim()) return;
+
+    setIsLoading(true);
+    setInitiated(true);
+    setDisplayedSteps([]);
+    setDisplayedCode('');
+    setDatasets([]);
+
+    const trainingJSON = trainingData ? JSON.parse(trainingData) : null;
+
+    const message = {
+      role: 'user',
+      content: prompt,
+      trainingData: trainingData.trim() || undefined,
+      timestamp: new Date(),
+      userId
+    };
+
+    setChatMessages(prev => [...prev, message]);
+
+    socket.emit('generate-response', {
+      userPrompt: prompt,
+      trainingData: trainingJSON,
+      userId,
+      sessionId: sessionId || Date.now().toString()
+    });
+
+    setPrompt('');
+    setTrainingData('');
   };
 
   const downloadNotebook = () => {
     const notebook = {
       cells: [{
         cell_type: "code",
-        execution_count: null,
-        metadata: {},
+        source: [code],
         outputs: [],
-        source: [generatedCode]
+        metadata: {},
+        execution_count: null,
       }],
-      metadata: {
-        kernelspec: {
-          display_name: "Python 3",
-          language: "python",
-          name: "python3"
-        }
-      },
+      metadata: { kernelspec: { name: "python3", language: "python", display_name: "Python 3" } },
       nbformat: 4,
-      nbformat_minor: 4
+      nbformat_minor: 4,
     };
 
     const blob = new Blob([JSON.stringify(notebook, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'model.ipynb';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'generated_model.ipynb';
+    link.click();
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
-        Generate ML Code from a Prompt
-      </h1>
-
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">ML Code Generator</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Enter your model prompt
-          </label>
-          <textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full h-32 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-            placeholder="Describe your ML model needs... (e.g., 'Create a sentiment analysis model for Twitter data')"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="sampleData" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            Training Data (JSON format - optional)
-          </label>
-          <textarea
-            id="sampleData"
-            value={sampleData}
-            onChange={(e) => setSampleData(e.target.value)}
-            className="w-full h-32 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
-            placeholder='{"data": [{"text": "Great product!", "sentiment": 1}, ...]}'
-          />
-        </div>
-
-        <div>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isLoading ? (
-              <>
-                <Loader className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                Generating...
-              </>
-            ) : (
-              'Generate'
-            )}
-          </button>
-        </div>
+        <textarea
+          placeholder="Describe your ML model..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+        />
+        <textarea
+          placeholder="Sample training data (optional)"
+          value={trainingData}
+          onChange={(e) => setTrainingData(e.target.value)}
+          className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
+        >
+          {isLoading ? <Loader className="animate-spin" /> : 'Generate'}
+        </button>
       </form>
 
-      {isLoading ? (
-        <div className="mt-8 space-y-4">
-          <Skeleton height={200} className="rounded-lg" />
-          <Skeleton height={100} className="rounded-lg" count={2} />
-        </div>
-      ) : generatedCode && (
-        <div className="mt-8 space-y-8">
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">
-                Generated Code
-              </h2>
-              <button
-                onClick={downloadNotebook}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition duration-200"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download as Jupyter Notebook
-              </button>
-            </div>
-            <div className="rounded-lg overflow-hidden">
-              <SyntaxHighlighter
-                language="python"
-                style={atomOneDark}
-                customStyle={{
-                  padding: '1.5rem',
-                  borderRadius: '0.5rem',
-                  margin: 0
-                }}
-              >
-                {generatedCode}
-              </SyntaxHighlighter>
-            </div>
-          </div>
+      
 
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-              📊 Suggested Datasets
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {datasets.map((dataset, index) => (
-                <a
-                  key={index}
-                  href={dataset.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition duration-200 border border-slate-200 dark:border-slate-700"
-                >
-                  <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                    {dataset.name}
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-400">
-                    {dataset.description}
-                  </p>
-                </a>
-              ))}
-            </div>
+      {initiated &&  (
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-semibold">Generated Code</h2>
+            <button onClick={downloadNotebook} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center">
+              <Download className="mr-2 h-4 w-4" />
+              Download Notebook
+            </button>
+          </div>
+          <div className="max-h-[600px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <SyntaxHighlighter language="python" style={atomOneDark} customStyle={{ margin: 0 }}>
+      {displayedCode}
+    </SyntaxHighlighter>
+  </div>
+        </div>
+      )}
+
+      {datasets.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
+            📊 Suggested Datasets
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {datasets.map((dataset, index) => (
+              <a
+                key={index}
+                href={dataset.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition duration-200 border border-slate-200 dark:border-slate-700"
+              >
+                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                  {dataset.title}
+                </h3>
+
+              </a>
+            ))}
           </div>
         </div>
       )}

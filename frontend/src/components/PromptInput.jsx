@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 
-const PromptInput = () => {
+const PromptInput = ({ onSubmit }) => {
   const [prompt, setPrompt] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // This would connect to the backend in a real implementation
-    console.log('Prompt submitted:', prompt);
+    if (!prompt.trim()) return;
+    onSubmit(prompt);
     setPrompt('');
   };
 

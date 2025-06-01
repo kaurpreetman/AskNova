@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const MessageSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'assistant'], required: true },
@@ -21,4 +21,5 @@ const HistorySchema = new mongoose.Schema({
   sessions: [SessionSchema]
 });
 
-module.exports = mongoose.model('History', HistorySchema);
+const History = mongoose.model('History', HistorySchema);
+export default History;

@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { isAuthenticated, user, login, logout } = useAuth();
-
+   
   return (
     <nav className="sticky top-0 z-10 backdrop-blur-md bg-white/70 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

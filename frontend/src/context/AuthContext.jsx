@@ -5,7 +5,6 @@ const AuthContext = createContext();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');
-
   return context;
 };
 
@@ -20,17 +19,23 @@ export const AuthProvider = ({ children }) => {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.user) {
+        if (data) {
+
           setIsAuthenticated(true);
-          setUser(data.user);
+          setUser(data);
+          console.log(data)
+          console.log(data._id)
+          localStorage.setItem('userId', data._id); // ✅ Store userId
         } else {
           setIsAuthenticated(false);
           setUser(null);
+          localStorage.removeItem('userId'); // ❌ Remove if not logged in
         }
       })
       .catch(() => {
         setIsAuthenticated(false);
         setUser(null);
+        localStorage.removeItem('userId'); // ❌ On error, clear it
       });
   }, []);
 
@@ -47,10 +52,12 @@ export const AuthProvider = ({ children }) => {
       .then(() => {
         setIsAuthenticated(false);
         setUser(null);
+        localStorage.removeItem('userId'); // ❌ Clear on logout
       })
       .catch(() => {
         setIsAuthenticated(false);
         setUser(null);
+        localStorage.removeItem('userId'); // ❌ Clear even on error
       });
   };
 

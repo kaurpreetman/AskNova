@@ -2,12 +2,12 @@ export const getCurrentUser = (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ user: null });
   }
-  const user = {
-  username: req.user.username,
-  avatarUrl: req.user.avatarUrl|| '',
-};
-console.log(user);
-  res.json({ user });
+//   const user = {
+//   username: req.user.username,
+//   avatarUrl: req.user.avatarUrl|| '',
+// };
+// console.log("user"+ req.user);
+  res.json(req.user);
 };
 
 export const logoutUser = (req, res) => {
