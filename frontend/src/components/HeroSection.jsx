@@ -1,8 +1,12 @@
 import React from 'react';
 import HeroIllustration from './HeroIllustration';
 import { Send } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
 const HeroSection = () => {
+    const navigate = useNavigate();
+     const handleStartGenerating = () => {
+    navigate('/generate'); 
+  };
   return (
     <section className="py-12 sm:py-16 md:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
       <div className="max-w-7xl mx-auto">
@@ -21,7 +25,8 @@ const HeroSection = () => {
             </p>
 
             <button
-              type="submit"
+              type="button"
+              onClick={handleStartGenerating}
               className="flex items-center px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
             >
               <span>Start Generating</span>

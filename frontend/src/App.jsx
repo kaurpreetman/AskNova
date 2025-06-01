@@ -2,11 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HeroSection from './components/HeroSection';
-import CodeGeneration from './components/CodeGeneration';
 
+import Footer from './components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
+import CodeGeneration from './components/CodeGeneration';
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
   return isAuthenticated ? children : <Navigate to="/" replace />;
@@ -14,7 +14,7 @@ const PrivateRoute = ({ children }) => {
 
 function App() {
   return (
-    <BrowserRouter>
+     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
           <div className="min-h-screen flex flex-col">
@@ -30,10 +30,9 @@ function App() {
                     </PrivateRoute>
                   }
                 />
-                {/* Add any other routes */}
               </Routes>
             </main>
-       
+            <Footer />
           </div>
         </ThemeProvider>
       </AuthProvider>
