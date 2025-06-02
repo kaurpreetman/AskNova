@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
-import { Download, Loader } from 'lucide-react';
+import { Download, Loader,History, ListChecks,ClipboardCopy,Check } from 'lucide-react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
@@ -22,9 +22,13 @@ const CodeGeneration = () => {
   const [chatMessages, setChatMessages] = useState([]);
   const [initiated, setInitiated] = useState(false);
   const [userId, setUserId] = useState(null);
-  const chatContainerRef = useRef(null);
+    const [copied, setCopied] = useState(false);
 
   const sessionId = new URLSearchParams(window.location.search).get('session');
+
+  // Placeholder history & steps - replace with real logic if needed
+  const history = chatMessages;
+  const implementationSteps = displayedSteps.map((s) => `${s.title}: ${s.description}`);
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('userId');
@@ -50,9 +54,7 @@ const CodeGeneration = () => {
       setIsLoading(false);
       parseGeminiResponse(data.response, false);
       accumulatedResponse = '';
-      if (data.datasets) {
-        setDatasets(data.datasets);
-      }
+      if (data.datasets) setDatasets(data.datasets);
     });
 
     newSocket.on('error', (errorData) => {
@@ -61,6 +63,7 @@ const CodeGeneration = () => {
     });
 
     return () => {
+      clearTimeout(debounceTimer);
       newSocket.disconnect();
     };
   }, []);
@@ -76,18 +79,22 @@ const CodeGeneration = () => {
       if (partialMatch) {
         setDisplayedCode(partialMatch[1].trim());
       }
-      console.log(displayedCode)
       return;
     }
 
-    const tagsMatch = response.match(/<ChanetTags>([\s\S]*?)<\/ChanetTags>/);
+    const tagsMatch = response.match(/<AskNovaSteps>([\s\S]*?)<\/AskNovaSteps>/);
     if (tagsMatch) {
-      const steps = tagsMatch[1].split('\n').map(tag => {
-        const [title, ...desc] = tag.split(':');
-        return { title: title.trim(), description: desc.join(':').trim() };
-      });
-      setSteps(steps);
-      setDisplayedSteps(steps);
+      const steps = tagsMatch[1]
+  .split('\n')
+  .map(tag => {
+    const [title, ...desc] = tag.split(':');
+    return { title: title.trim(), description: desc.join(':').trim() };
+  })
+  .filter(step => step.title && step.description); // Only keep valid steps
+
+setSteps(steps);
+setDisplayedSteps(steps);
+
     }
 
     const codeMatch = response.match(/<code>([\s\S]*?)<\/code>/);
@@ -153,75 +160,189 @@ const CodeGeneration = () => {
     link.download = 'generated_model.ipynb';
     link.click();
   };
-
+console.log(displayedSteps);
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-6">ML Code Generator</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <textarea
-          placeholder="Describe your ML model..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
-        />
-        <textarea
-          placeholder="Sample training data (optional)"
-          value={trainingData}
-          onChange={(e) => setTrainingData(e.target.value)}
-          className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
-        />
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
-        >
-          {isLoading ? <Loader className="animate-spin" /> : 'Generate'}
-        </button>
-      </form>
-
-      
-
-      {initiated &&  (
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-xl font-semibold">Generated Code</h2>
-            <button onClick={downloadNotebook} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center">
-              <Download className="mr-2 h-4 w-4" />
-              Download Notebook
-            </button>
+     <div className="flex min-h-screen">
+      <div className="w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+        <div className="p-6 h-full">
+          <div className="flex items-center mb-6 text-slate-900 dark:text-white">
+            <History className="w-5 h-5 mr-2" />
+            <h2 className="text-lg font-semibold">History</h2>
           </div>
-          <div className="max-h-[600px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
-    <SyntaxHighlighter language="python" style={atomOneDark} customStyle={{ margin: 0 }}>
-      {displayedCode}
-    </SyntaxHighlighter>
-  </div>
-        </div>
-      )}
-
-      {datasets.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-4">
-            📊 Suggested Datasets
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {datasets.map((dataset, index) => (
-              <a
-                key={index}
-                href={dataset.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-6 bg-white dark:bg-slate-800 rounded-lg shadow-sm hover:shadow-md transition duration-200 border border-slate-200 dark:border-slate-700"
+          <div className="space-y-4">
+            {history.map((item) => (
+              <button
+                key={item.id}
+                className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
               >
-                <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">
-                  {dataset.title}
-                </h3>
-
-              </a>
+                <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
+                  {item.prompt}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  {new Date(item.timestamp).toLocaleDateString()}
+                </p>
+              </button>
             ))}
           </div>
         </div>
+      </div>
+
+
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
+            Generate ML Code from a Prompt
+          </h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="prompt" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Enter your model prompt
+              </label>
+          <textarea
+            placeholder="Describe your ML model..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+          /> </div>
+          <div>
+              <label htmlFor="sampleData" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Training Data (JSON format - optional)
+              </label>
+          <textarea
+            placeholder="Sample training data (optional)"
+            value={trainingData}
+            onChange={(e) => setTrainingData(e.target.value)}
+            className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+          /> </div>
+          <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate'
+                )}
+              </button>
+            </div>
+        </form>
+
+        {initiated && (
+  <div className="mt-8">
+    <div className="flex justify-between items-center mb-2">
+  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Generated Code</h2>
+  <div className="flex items-center space-x-2">
+    <button
+      onClick={downloadNotebook}
+      className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700 transition-colors"
+    >
+      <Download className="mr-2 h-4 w-4" />
+      Download Notebook
+    </button>
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(displayedCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center hover:bg-slate-600 transition-colors"
+    >
+      {copied ? (
+        <>
+          <Check className="mr-2 h-4 w-4" />
+          Copied
+        </>
+      ) : (
+        <>
+          <ClipboardCopy className="mr-2 h-4 w-4" />
+          Copy Code
+        </>
       )}
+    </button>
+  </div>
+</div>
+
+    <div
+      className="rounded-lg bg-slate-900"
+      style={{
+        maxHeight: '600px',
+        overflowX: 'auto',
+        overflowY: 'auto',
+        border: '1px solid #334155',
+      }}
+    >
+      <SyntaxHighlighter
+        language="python"
+        style={atomOneDark}
+        customStyle={{
+          margin: 0,
+          padding: '1.5rem',
+          backgroundColor: 'transparent', // Ensure it blends with parent
+          minWidth: '100%',
+          whiteSpace: 'pre', // Prevent wrapping
+        }}
+      >
+        {displayedCode}
+      </SyntaxHighlighter>
     </div>
+  </div>
+)}
+ </div>
+ </div>    
+<div className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+        <div className="p-6 h-full">
+          <div className="mb-10">
+            <div className="flex items-center mb-6 text-slate-900 dark:text-white">
+              <ListChecks className="w-5 h-5 mr-2" />
+              <h2 className="text-lg font-semibold">Implementation Steps</h2>
+            </div>
+            <div className="space-y-4">
+              {displayedSteps.map((step, index) => (
+                <div
+                  key={index}
+                  className="flex items-start p-3 text-sm text-slate-700 dark:text-slate-300"
+                >
+                  <div className="w-8 h-8 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 rounded-full mr-3 flex-shrink-0 text-purple-600 dark:text-purple-400 font-medium">
+                    {index + 1}
+                  </div>
+                  <p className="pt-1.5">{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {datasets.length > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-6 flex items-center">
+                📊 Suggested Datasets
+              </h2>
+              <div className="space-y-4">
+                {datasets.map((dataset, index) => (
+                  <a
+                    key={index}
+                    href={dataset.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <h3 className="font-medium text-slate-900 dark:text-white mb-1">
+                      {dataset.title}
+                    </h3>
+                    
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+   
   );
 };
 
