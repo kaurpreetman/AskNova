@@ -8,39 +8,49 @@ export const useAuth = () => {
   return context;
 };
 
+// AuthContext.js
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const stored = localStorage.getItem('isAuthenticated');
+    return stored === 'true';
+  });
+ const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
+  const [isLoading, setIsLoading] = useState(true); // Add this
 
-  // Check login status on mount
   useEffect(() => {
     fetch('http://localhost:5000/auth/me', {
       credentials: 'include',
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Not authenticated');
+        return res.json();
+      })
       .then(data => {
-        if (data) {
-
+        if (data && data._id) {
           setIsAuthenticated(true);
           setUser(data);
-          console.log(data)
-          console.log(data._id)
-          localStorage.setItem('userId', data._id); // ✅ Store userId
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('user', JSON.stringify(data));
         } else {
           setIsAuthenticated(false);
           setUser(null);
-          localStorage.removeItem('userId'); // ❌ Remove if not logged in
+          localStorage.removeItem('isAuthenticated');
+          localStorage.removeItem('user');
         }
       })
       .catch(() => {
         setIsAuthenticated(false);
         setUser(null);
-        localStorage.removeItem('userId'); // ❌ On error, clear it
-      });
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = () => {
-    // Redirect to backend GitHub OAuth login route
     window.location.href = 'http://localhost:5000/auth/github';
   };
 
@@ -48,21 +58,15 @@ export const AuthProvider = ({ children }) => {
     fetch('http://localhost:5000/auth/logout', {
       method: 'GET',
       credentials: 'include',
-    })
-      .then(() => {
-        setIsAuthenticated(false);
-        setUser(null);
-        localStorage.removeItem('userId'); // ❌ Clear on logout
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-        setUser(null);
-        localStorage.removeItem('userId'); // ❌ Clear even on error
-      });
+    }).finally(() => {
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem('userId');
+    });
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

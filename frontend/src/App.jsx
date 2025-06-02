@@ -7,10 +7,15 @@ import Footer from './components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import CodeGeneration from './components/CodeGeneration';
+
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/" replace />;
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <div className="p-6 text-center">Loading...</div>; // Or a spinner
+
+  return isAuthenticated ? children : <Navigate to='/' replace/>;
 };
+
 
 function App() {
   return (
