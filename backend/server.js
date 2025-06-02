@@ -34,10 +34,10 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use('/auth', authRoutes);
-app.use('/gen', geminiRoutes); // REST proxy
+app.use('/gen', geminiRoutes); 
 
 
 
 server.listen(process.env.PORT, () =>
-  console.log(`🚀 Backend http://localhost:${process.env.PORT}`)
+  console.log(`Backend http://localhost:${process.env.PORT}`)
 );

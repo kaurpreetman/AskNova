@@ -1,4 +1,4 @@
-// kaggleHelper.js
+
 import { KaggleNode } from 'kaggle-node';
 
 const kaggle = new KaggleNode({
@@ -8,23 +8,22 @@ const kaggle = new KaggleNode({
   },
 });
 
-// Function to search for datasets based on a keyword
+
 export async function searchDatasets(keyword) {
   try {
     const options = {
       search: keyword,
-      sortBy: 'votes', // Options: 'hottest', 'votes', 'updated', 'active', 'relevance'
-      // page: 1,
+      sortBy: 'votes', 
     };
     const datasets = await kaggle.datasets.search(options);
-    return datasets.data;  // return raw dataset array
+    return datasets.data; 
   } catch (error) {
     console.error('Error searching datasets:', error);
     throw new Error('Error searching datasets');
   }
 }
 
-// Function to display datasets based on a keyword
+
 export async function displayDatasetOptions(keyword) {
   try {
     let datasets = await searchDatasets(keyword);
@@ -37,7 +36,6 @@ export async function displayDatasetOptions(keyword) {
         console.log(`${index + 1}. ${dataset.title} by ${dataset.ref} - url ${dataset.url}`);
       });
 
-      // Return datasets array with success message
       return {
         status: 200,
         data: datasets,
@@ -61,7 +59,6 @@ export async function displayDatasetOptions(keyword) {
   }
 }
 
-// Function to download a dataset by its reference
 export async function downloadDataset(datasetRef, downloadPath) {
   try {
     await kaggle.datasets.download(datasetRef, downloadPath);
