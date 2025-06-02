@@ -5,7 +5,8 @@ import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
 import 'react-loading-skeleton/dist/skeleton.css';
-
+import { useAuth } from '../context/AuthContext';
+import MonacoEditor from './MonacoEditor';
 SyntaxHighlighter.registerLanguage('python', python);
 
 const CodeGeneration = () => {
@@ -24,11 +25,11 @@ const CodeGeneration = () => {
   const [copied, setCopied] = useState(false);
 
   const sessionId = new URLSearchParams(window.location.search).get('session');
-
+   const  { user }= useAuth();
   useEffect(() => {
-    const storedUserId = localStorage.getItem('userId');
-    setUserId(storedUserId);
-
+    
+    setUserId(user._id);
+   console.group(userId);
     const newSocket = io('http://localhost:5000', {
       transports: ['websocket'],
     });
@@ -286,10 +287,7 @@ const CodeGeneration = () => {
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Generated Code</h2>
               <div className="flex items-center space-x-2">
-                <button onClick={downloadNotebook} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Notebook
-                </button>
+                
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(displayedCode);
@@ -313,11 +311,10 @@ const CodeGeneration = () => {
               </div>
             </div>
 
-            <div className="rounded-lg bg-slate-900 border border-slate-700 overflow-auto max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh]">
-              <SyntaxHighlighter language="python" style={atomOneDark} customStyle={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-                {displayedCode}
-              </SyntaxHighlighter>
-            </div>
+            <div className="rounded-lg border border-slate-700 overflow-hidden" style={{ height: '70vh' }}>
+  <MonacoEditor code={displayedCode} isPrinting={isLoading} />
+</div>
+
           </div>
         )}
       </div>
