@@ -4,7 +4,6 @@ import { Download, Loader, History, ListChecks, ClipboardCopy, Check } from 'luc
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
-import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
 SyntaxHighlighter.registerLanguage('python', python);
@@ -103,47 +102,43 @@ const CodeGeneration = () => {
     setInitiated(true);
   };
 
- useEffect(() => {
-  if (!socket || !userId || !sessionId) return;
+  useEffect(() => {
+    if (!socket || !userId || !sessionId) return;
 
-  const handleHistoryResult = (data) => {
-    if (!data.isEmpty && data.messages?.length > 0) {
-      // Map messages: assistant content replaced by placeholder message
-      const cleanedMessages = data.messages.map((msg) => ({
-        ...msg,
-        content: msg.role === 'assistant' 
-          ? 'Ok let me help you with that...' 
-          : msg.content,
-      }));
+    const handleHistoryResult = (data) => {
+      if (!data.isEmpty && data.messages?.length > 0) {
+        const cleanedMessages = data.messages.map((msg) => ({
+          ...msg,
+          content: msg.role === 'assistant'
+            ? 'Ok let me help you with that...'
+            : msg.content,
+        }));
 
-      setChatMessages(cleanedMessages);
+        setChatMessages(cleanedMessages);
 
-      if (data.lastResponse) {
-        parseGeminiResponse(data.lastResponse, false);
-        console.log('Restoring last response:', data);
+        if (data.lastResponse) {
+          parseGeminiResponse(data.lastResponse, false);
+          console.log('Restoring last response:', data);
+        }
+
+        if (data.datasets) {
+          setDatasets(data.datasets);
+        }
+
+        setInitiated(true);
+      } else {
+        setChatMessages([]);
+        setInitiated(true);
       }
+    };
 
-      if (data.datasets) {
-        setDatasets(data.datasets);
-      }
+    socket.emit('get-history', { userId, sessionId });
+    socket.on('history-result', handleHistoryResult);
 
-      setInitiated(true);
-    } else {
-      // No history found
-      setChatMessages([]);
-      setInitiated(true);
-    }
-  };
-
-  // Emit event to request history for this user/session
-  socket.emit('get-history', { userId, sessionId });
-  socket.on('history-result', handleHistoryResult);
-
-  // Cleanup listener on unmount or deps change
-  return () => {
-    socket.off('history-result', handleHistoryResult);
-  };
-}, [socket, userId, sessionId]);
+    return () => {
+      socket.off('history-result', handleHistoryResult);
+    };
+  }, [socket, userId, sessionId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -216,20 +211,17 @@ const CodeGeneration = () => {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar: History */}
-      <div className="w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
-        <div className="p-6 h-full">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Left Sidebar */}
+      <div className="w-full lg:w-64 xl:w-80 shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800">
+        <div className="p-6">
           <div className="flex items-center mb-6 text-slate-900 dark:text-white">
             <History className="w-5 h-5 mr-2" />
             <h2 className="text-lg font-semibold">History</h2>
           </div>
           <div className="space-y-4">
             {chatMessages.map((item, index) => (
-              <button
-                key={index}
-                className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
+              <button key={index} className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
                 <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
                   {item.content}
                 </p>
@@ -243,101 +235,96 @@ const CodeGeneration = () => {
       </div>
 
       {/* Main Panel */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
-            Generate ML Code from a Prompt
-          </h1>
+      <div className="flex-1 overflow-auto px-4 py-6 sm:px-6 md:px-10 lg:px-12 xl:px-16">
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-8">
+          Generate ML Code from a Prompt
+        </h1>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Enter your model prompt
-              </label>
-              <textarea
-                placeholder="Describe your ML model..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Enter your model prompt
+            </label>
+            <textarea
+              placeholder="Describe your ML model..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+            />
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Training Data (JSON format - optional)
-              </label>
-              <textarea
-                placeholder="Sample training data (optional)"
-                value={trainingData}
-                onChange={(e) => setTrainingData(e.target.value)}
-                className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Training Data (JSON format - optional)
+            </label>
+            <textarea
+              placeholder="Sample training data (optional)"
+              value={trainingData}
+              onChange={(e) => setTrainingData(e.target.value)}
+              className="w-full h-24 p-4 rounded-lg border dark:bg-slate-800 dark:text-white"
+            />
+          </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Loader className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                  Generating...
-                </>
-              ) : (
-                'Generate'
-              )}
-            </button>
-          </form>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+          >
+            {isLoading ? (
+              <>
+                <Loader className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                Generating...
+              </>
+            ) : (
+              'Generate'
+            )}
+          </button>
+        </form>
 
-          {initiated && (
-            <div className="mt-8">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Generated Code</h2>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={downloadNotebook}
-                    className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download Notebook
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(displayedCode);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                    className="bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center hover:bg-slate-600"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <ClipboardCopy className="mr-2 h-4 w-4" />
-                        Copy Code
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-slate-900 border border-slate-700 overflow-auto max-h-[600px]">
-                <SyntaxHighlighter language="python" style={atomOneDark} customStyle={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
-                  {displayedCode}
-                </SyntaxHighlighter>
+        {initiated && (
+          <div className="mt-8">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Generated Code</h2>
+              <div className="flex items-center space-x-2">
+                <button onClick={downloadNotebook} className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Notebook
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(displayedCode);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center hover:bg-slate-600"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardCopy className="mr-2 h-4 w-4" />
+                      Copy Code
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-          )}
-        </div>
+
+            <div className="rounded-lg bg-slate-900 border border-slate-700 overflow-auto max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh]">
+              <SyntaxHighlighter language="python" style={atomOneDark} customStyle={{ padding: '1.5rem', backgroundColor: 'transparent' }}>
+                {displayedCode}
+              </SyntaxHighlighter>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Sidebar: Steps + Datasets */}
-      <div className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
-        <div className="p-6 h-full">
+      {/* Right Sidebar */}
+      <div className="w-full lg:w-64 xl:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-800">
+        <div className="p-6">
           <div className="mb-10">
             <div className="flex items-center mb-6 text-slate-900 dark:text-white">
               <ListChecks className="w-5 h-5 mr-2" />
