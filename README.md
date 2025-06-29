@@ -95,13 +95,6 @@ GEMINI_KEY=your_gemini_api
 GITHUB_CALLBACK_URL=http://localhost:5000/auth/github/callback
 ```
 
-#### 📁 frontend/.env
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
-```
-
----
 
 ### 4. Run the Application Locally
 
@@ -119,7 +112,7 @@ cd ../frontend
 npm run dev
 ```
 
-Visit `http://localhost:5000` in your browser 🚀
+Visit `http://localhost:5173` in your browser 🚀
 
 ---
 
