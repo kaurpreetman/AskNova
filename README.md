@@ -54,7 +54,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/asknova.git
+git clone https://github.com/kaurpreetman/AskNova.git
 cd asknova
 ```
 
@@ -107,7 +107,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 ```bash
 cd backend
-npm run dev
+npx nodemon server.js
 ```
 
 #### Start Frontend Dev Server
