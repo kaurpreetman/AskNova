@@ -139,5 +139,5 @@ git push origin feature/awesome-feature
 
 ## 👩‍💻 Made With Love
 
-Developed by Manpreet and the open-source community ❤️
+Developed by Manpreet ❤️
 
