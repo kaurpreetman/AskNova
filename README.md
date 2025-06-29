@@ -7,8 +7,8 @@
 ## 🌐 Live Links
 
 ```text
-🔗 Live App: https://asknova.yourdomain.com
-🎥 Demo Video: https://youtu.be/your-demo-link
+🔗 Live App: https://asknovanew.netlify.app
+
 ```
 
 ---
@@ -117,28 +117,7 @@ cd ../frontend
 npm run dev
 ```
 
-Visit `http://localhost:3000` in your browser 🚀
-
----
-
-## 📁 Folder Structure (Simplified)
-
-```bash
-asknova/
-├── frontend/
-│   ├── pages/
-│   ├── components/
-│   └── ...
-├── backend/
-│   ├── routes/
-│   ├── controllers/
-│   ├── services/
-│   └── ...
-├── shared/
-├── public/
-├── README.md
-└── .env
-```
+Visit `http://localhost:5000` in your browser 🚀
 
 ---
 
