@@ -91,6 +91,8 @@ GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 KAGGLE_USERNAME=your_kaggle_username
 KAGGLE_KEY=your_kaggle_api_key
+GEMINI_KEY=your_gemini_api
+GITHUB_CALLBACK_URL=http://localhost:5000/auth/github/callback
 ```
 
 #### 📁 frontend/.env
