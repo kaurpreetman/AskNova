@@ -6,7 +6,7 @@ import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import python from 'react-syntax-highlighter/dist/esm/languages/hljs/python';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { useAuth } from '../context/AuthContext';
-import MonacoEditor from './MonacoEditor';
+import MonacoEditor from '../components/MonacoEditor';
 SyntaxHighlighter.registerLanguage('python', python);
 
 const CodeGeneration = () => {

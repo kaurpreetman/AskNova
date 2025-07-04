@@ -61,10 +61,10 @@ export const AuthProvider = ({ children }) => {
     }).finally(() => {
       setIsAuthenticated(false);
       setUser(null);
-      localStorage.removeItem('userId');
+      localStorage.removeItem('user');
     });
   };
-console.log("user"+user._id);
+
   return (
     <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}

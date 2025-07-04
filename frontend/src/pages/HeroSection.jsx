@@ -1,5 +1,5 @@
 import React from 'react';
-import HeroIllustration from './HeroIllustration';
+import HeroIllustration from '../components/HeroIllustration';
 import { Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 const HeroSection = () => {
