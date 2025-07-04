@@ -23,7 +23,19 @@ const CodeGeneration = () => {
   const [initiated, setInitiated] = useState(false);
   const [userId, setUserId] = useState(null);
   const [copied, setCopied] = useState(false);
+const [userSessions, setUserSessions] = useState([]);
 
+useEffect(() => {
+  if (socket && userId) {
+    socket.emit('get-sessions', { userId });
+
+    socket.on('sessions-result', (data) => {
+      setUserSessions(data.sessions);
+    });
+
+    return () => socket.off('sessions-result');
+  }
+}, [socket, userId]);
   const sessionId = new URLSearchParams(window.location.search).get('session');
    const  { user }= useAuth();
   useEffect(() => {
@@ -221,16 +233,25 @@ const CodeGeneration = () => {
             <h2 className="text-lg font-semibold">History</h2>
           </div>
           <div className="space-y-4">
-            {chatMessages.map((item, index) => (
-              <button key={index} className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
-                  {item.content}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  {new Date(item.timestamp).toLocaleDateString()}
-                </p>
-              </button>
-            ))}
+            {userSessions.map((session, index) => (
+  <button
+    key={index}
+    className="w-full text-left p-4 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+    onClick={() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('session', session.id);
+      window.location.href = url.toString(); // reload page with session param
+    }}
+  >
+    <p className="text-sm font-medium text-slate-900 dark:text-white line-clamp-2">
+      {session.title}
+    </p>
+    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+      {new Date(session.lastActive).toLocaleDateString()}
+    </p>
+  </button>
+))}
+
           </div>
         </div>
       </div>

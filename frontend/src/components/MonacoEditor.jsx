@@ -1,10 +1,10 @@
 import React from 'react';
 import Editor from '@monaco-editor/react';
 import { Download, Loader2 } from 'lucide-react';
-import { useTheme } from '../context/ThemeContext'; // ✅ Import theme context
+import { useTheme } from '../context/ThemeContext';
 
 const MonacoEditor = ({ code, isPrinting }) => {
-  const { theme } = useTheme(); // ✅ Access current theme ('dark' or 'light')
+  const { theme } = useTheme();
 
   const handleDownload = () => {
     const notebookStructure = {
@@ -48,32 +48,36 @@ const MonacoEditor = ({ code, isPrinting }) => {
     document.body.removeChild(a);
   };
 
+  const isRelevantCode = code && !code.includes('⚠️') && code.trim().length > 10;
+
   return (
     <div className="relative rounded-lg border border-slate-700 dark:border-slate-600 overflow-hidden mt-4">
-      <div className="absolute top-3 right-3 z-10">
-        <button
-          onClick={handleDownload}
-          disabled={isPrinting}
-          className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700 text-sm disabled:opacity-50"
-        >
-          {isPrinting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4 mr-2" />
-              Download Notebook
-            </>
-          )}
-        </button>
-      </div>
+      {isRelevantCode && (
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            onClick={handleDownload}
+            disabled={isPrinting}
+            className="bg-teal-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-teal-700 text-sm disabled:opacity-50"
+          >
+            {isPrinting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download Notebook
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       <Editor
         height="70vh"
         defaultLanguage="python"
-        theme={theme === 'dark' ? 'vs-dark' : 'light'} // ✅ Dynamic theme
+        theme={theme === 'dark' ? 'vs-dark' : 'light'}
         value={code}
         options={{
           minimap: { enabled: false },
