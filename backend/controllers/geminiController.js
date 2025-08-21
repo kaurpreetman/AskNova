@@ -7,7 +7,32 @@ const initSocketHandler = (server) => {
   return socketHandler;
 };
 
+const extractKeywordsAndKaggleApiHit = async (req, res) => {
+  try {
+    if (!socketHandler) {
+      return res.status(500).json({ success: false, message: 'Socket handler not initialized' });
+    }
 
+    const { userPrompt, userId } = req.body;
+
+    if (!userPrompt || !userId) {
+      return res.status(400).json({ success: false, message: 'Prompt and userID are required' });
+    }
+
+    socketHandler.getIO().emit('extract-keywords', { userPrompt, userId });
+
+    socketHandler.getIO().once('keywords-result', (data) => {
+      res.status(200).json({ success: true, data, message: 'Suggested datasets successfully' });
+    });
+
+    socketHandler.getIO().once('error', (error) => {
+      res.status(500).json({ success: false, message: `Keyword extraction failed: ${error.message}` });
+    });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 
 const genResponse = async (req, res) => {
   try {
@@ -52,10 +77,36 @@ const genResponse = async (req, res) => {
   }
 };
 
+const getHistory = async (req, res) => {
+  try {
+    if (!socketHandler) {
+      return res.status(500).json({ success: false, message: 'Socket handler not initialized' });
+    }
+
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+
+    socketHandler.getIO().once('history-result', (data) => {
+      res.status(200).json({ success: true, data, message: 'History retrieved successfully' });
+    });
+
+    socketHandler.getIO().once('error', (error) => {
+      res.status(500).json({ success: false, message: `History retrieval failed: ${error.message}` });
+    });
+
+    socketHandler.getIO().emit('get-history', { userId });
+
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
 
 export {
   initSocketHandler,
-  
+  extractKeywordsAndKaggleApiHit,
   genResponse,
-  
+  getHistory,
 };
