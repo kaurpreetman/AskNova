@@ -3,9 +3,9 @@ import { Strategy as GitHubStrategy } from 'passport-github2';
 import User from '../models/User.js';
 
 passport.use(new GitHubStrategy({
-  clientID: 'Ov23lixVqBoP3pVnLxIJ',
-  clientSecret: 'b8c69292a322fa2540d26c3037b4f69fc57ff3e4',
-  callbackURL: '/auth/github/callback'
+  clientID: 'Ov23li7KPSs2lFeh8039',
+  clientSecret: '2dfbf74f2028598b0a458afb73dc1136f9ef4c5f',
+  callbackURL: 'http://localhost:5000/auth/github/callback'
 }, async (accessToken, refreshToken, profile, done) => {
   try {
     const email = profile.emails && profile.emails.length > 0 ? profile.emails[0].value : '';
